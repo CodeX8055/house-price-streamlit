@@ -1,9 +1,71 @@
-# === Streamlit UI ===
+import streamlit as st
+
+# === Load Valid Indian Cities ===
+with open("indian_cities.txt", "r") as file:
+    valid_cities = set(line.strip().lower() for line in file if line.strip())
+
+# === City Tier & Base Price Logic ===
+def detect_city_tier(city):
+    tier1 = ['mumbai', 'delhi', 'bengaluru', 'chennai', 'kolkata', 'hyderabad']
+    tier2 = ['ahmedabad', 'pune', 'jaipur', 'lucknow', 'surat', 'kanpur']
+    if city in tier1:
+        return 2.5e7, "Tier 1 - Metro"
+    elif city in tier2 or city.endswith("pur") or city.endswith("nagar") or len(city) >= 7:
+        return 1.4e7, "Tier 2"
+    else:
+        return 0.6e7, "Tier 3"
+
+# === Price Estimation Function ===
+def estimate_price(base_price, size, bedrooms, bathrooms, floors, year_built, parking, garden, facilities):
+    price = base_price
+    size_diff = size - 1500
+    price += (size_diff // 100) * 0.05 * base_price
+    if bedrooms == 1:
+        price -= 0.10 * base_price
+    elif bedrooms >= 3:
+        price += 0.10 * base_price
+    if bathrooms > 2:
+        price += 0.05 * (bathrooms - 2) * base_price
+    elif bathrooms < 2:
+        price -= 0.05 * (2 - bathrooms) * base_price
+    if floors == 2:
+        price += 0.10 * base_price
+    elif floors >= 3:
+        price += 0.20 * base_price
+    age = max(0, 2025 - year_built)
+    price *= max(1 - 0.01 * age, 0.7)
+    if parking:
+        price += 0.05 * base_price
+    if garden:
+        price += 0.05 * base_price
+    facilities = [f.strip().lower() for f in facilities.split(",") if f.strip().lower() not in ("", "no", "none")]
+    price += len(facilities) * 0.03 * base_price
+    return price
+
+# === App Config
 st.set_page_config(page_title="Indian House Price Estimator", layout="centered")
 st.title("Smart Indian House Price Estimator")
 st.caption("Estimate realistic house prices based on city, size, features, and facilities.")
 
-# Inputs
+# === Session Defaults
+default_fields = {
+    "city": "",
+    "size": "",
+    "bedrooms": "",
+    "bathrooms": "",
+    "floors": "",
+    "year_built": "",
+    "parking": "-- Select --",
+    "garden": "-- Select --",
+    "facilities": "",
+    "show_reset_confirm": False,
+}
+
+for key, value in default_fields.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+# === Input Fields
 st.session_state.city = st.text_input("Enter your City (India):", value=st.session_state.city).strip().lower()
 
 if st.session_state.city:
@@ -17,31 +79,35 @@ if st.session_state.city:
         st.session_state.bathrooms = st.text_input("Bathrooms (1–9):", value=st.session_state.bathrooms)
         st.session_state.floors = st.text_input("Floors (1–9):", value=st.session_state.floors)
         st.session_state.year_built = st.text_input("Year Built (1900–2025):", value=st.session_state.year_built)
-        st.session_state.parking = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"],
-                                                index=["-- Select --", "Yes", "No"].index(st.session_state.parking))
-        st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"],
-                                               index=["-- Select --", "Yes", "No"].index(st.session_state.garden))
-        st.session_state.facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):",
-                                                    value=st.session_state.facilities)
+        st.session_state.parking = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"], index=["-- Select --", "Yes", "No"].index(st.session_state.parking))
+        st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"], index=["-- Select --", "Yes", "No"].index(st.session_state.garden))
+        st.session_state.facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):", value=st.session_state.facilities)
 
-        # === Buttons ===
+        # Buttons: Estimate and Reset
         col1, col2 = st.columns([5, 1])
         with col1:
-            estimate = st.button("Estimate Price")
+            estimate_clicked = st.button("Estimate Price")
         with col2:
-            reset_clicked = st.button("🔄", key="reset")
+            reset_clicked = st.button("🔄", help="Reset form")
 
-        # === Handle Reset
+        # === RESET CONFIRMATION (One-click)
         if reset_clicked:
-            confirm = st.radio("Are you sure you want to reset?", ["Cancel", "Yes"], horizontal=True, key="confirm_reset_choice")
-            if confirm == "Yes":
-                for key in defaults:
-                    st.session_state[key] = defaults[key]
-                st.success("All fields have been reset.")
-                st.stop()
+            st.session_state.show_reset_confirm = True
 
-        # === Handle Estimate
-        if estimate:
+        if st.session_state.show_reset_confirm:
+            st.warning("Are you sure you want to reset all fields?")
+            confirm_col1, confirm_col2 = st.columns(2)
+            with confirm_col1:
+                if st.button("Yes, Reset"):
+                    for key in default_fields:
+                        st.session_state[key] = default_fields[key]
+                    st.rerun()  # Clean rerun with blank state
+            with confirm_col2:
+                if st.button("No, Cancel"):
+                    st.session_state.show_reset_confirm = False
+
+        # === ESTIMATE CALCULATION
+        if estimate_clicked:
             try:
                 size = float(st.session_state.size)
                 bedrooms = int(st.session_state.bedrooms)
@@ -60,8 +126,7 @@ if st.session_state.city:
                 parking = st.session_state.parking == "Yes"
                 garden = st.session_state.garden == "Yes"
 
-                final_price = estimate_price(base_price, size, bedrooms, bathrooms, floors, year, parking, garden,
-                                             st.session_state.facilities)
+                final_price = estimate_price(base_price, size, bedrooms, bathrooms, floors, year, parking, garden, st.session_state.facilities)
                 final_price = min(max(final_price, 5e6), 5e8)
 
                 st.success(f"City Tier: {tier}")
