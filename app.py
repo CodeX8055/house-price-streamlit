@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import datetime, timedelta
 
 # === Load Valid Indian Cities ===
 with open("indian_cities.txt", "r") as file:
@@ -47,15 +48,21 @@ st.set_page_config(page_title="Indian House Price Estimator", layout="centered")
 st.title("Smart Indian House Price Estimator")
 st.caption("Estimate realistic house prices based on city, size, features, and facilities.")
 
+# Session init for reset confirmation
+if "confirm_reset" not in st.session_state:
+    st.session_state.confirm_reset = False
+
+# Input: City
 city = st.text_input("Enter your City (India):").strip().lower()
 
+# After city is entered
 if city:
     if city not in valid_cities:
         st.error("Invalid city. Please enter a valid Indian city.")
     else:
         base_price, tier = detect_city_tier(city)
 
-        # Use text inputs to keep fields blank initially
+        # Inputs - all blank initially
         size_input = st.text_input("Size (in sqft):")
         bedrooms_input = st.text_input("Bedrooms (1–9):")
         bathrooms_input = st.text_input("Bathrooms (1–9):")
@@ -65,7 +72,30 @@ if city:
         garden_input = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"])
         facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):")
 
-        if st.button("Estimate Price"):
+        # Two buttons side-by-side
+        col1, col2 = st.columns([5, 1])
+        with col1:
+            estimate_clicked = st.button("Estimate Price")
+        with col2:
+            reset_clicked = st.button("🔄", help="Reset all fields")
+
+        # Handle Reset
+        if reset_clicked:
+            st.session_state.confirm_reset = True
+
+        if st.session_state.confirm_reset:
+            st.warning("Are you sure you want to reset all fields?")
+            confirm_col1, confirm_col2 = st.columns(2)
+            with confirm_col1:
+                if st.button("Yes, Reset"):
+                    st.session_state.clear()
+                    st.experimental_rerun()
+            with confirm_col2:
+                if st.button("No"):
+                    st.session_state.confirm_reset = False
+
+        # Handle Estimate
+        if estimate_clicked:
             try:
                 size = float(size_input)
                 bedrooms = int(bedrooms_input)
