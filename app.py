@@ -112,9 +112,11 @@ if st.session_state.city:
 
         # Perform actual reset
         if st.session_state.reset_trigger:
-            for key in defaults:
-                st.session_state[key] = defaults[key]
-            st.experimental_rerun()
+         for key in defaults:
+            st.session_state[key] = defaults[key]
+        st.session_state.reset_trigger = False
+        st.success("All fields have been reset.")
+
 
         # Handle Estimate
         if estimate:
