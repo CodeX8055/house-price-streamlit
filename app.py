@@ -42,42 +42,33 @@ def estimate_price(base_price, size, bedrooms, bathrooms, floors, year_built, pa
     price += len(facilities) * 0.03 * base_price
     return price
 
+# === Initialize Session State ===
+for field in ["city", "size", "bedrooms", "bathrooms", "floors", "year_built", "parking", "garden", "facilities"]:
+    if field not in st.session_state:
+        st.session_state[field] = ""
+
 # === Streamlit App ===
 st.set_page_config(page_title="Indian House Price Estimator", layout="centered")
 st.title("Smart Indian House Price Estimator")
 st.caption("Estimate realistic house prices based on city, size, features, and facilities.")
 
-# Init
-if "confirm_reset" not in st.session_state:
-    st.session_state.confirm_reset = False
-if "reset_now" not in st.session_state:
-    st.session_state.reset_now = False
+# === Inputs ===
+st.session_state.city = st.text_input("Enter your City (India):", value=st.session_state.city).strip().lower()
 
-# Reset trigger
-if st.session_state.reset_now:
-    for key in list(st.session_state.keys()):
-        if key not in ["confirm_reset", "reset_now"]:
-            del st.session_state[key]
-    st.session_state.reset_now = False
-    st.stop()
-
-# Input: City
-city = st.text_input("Enter your City (India):", key="city_input").strip().lower()
-
-if city:
-    if city not in valid_cities:
+if st.session_state.city:
+    if st.session_state.city not in valid_cities:
         st.error("Invalid city. Please enter a valid Indian city.")
     else:
-        base_price, tier = detect_city_tier(city)
+        base_price, tier = detect_city_tier(st.session_state.city)
 
-        size = st.text_input("Size (in sqft):", key="size")
-        bedrooms = st.text_input("Bedrooms (1–9):", key="bedrooms")
-        bathrooms = st.text_input("Bathrooms (1–9):", key="bathrooms")
-        floors = st.text_input("Floors (1–9):", key="floors")
-        year_built = st.text_input("Year Built (1900–2025):", key="year")
-        parking_input = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"], key="parking")
-        garden_input = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"], key="garden")
-        facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):", key="facilities")
+        st.session_state.size = st.text_input("Size (in sqft):", value=st.session_state.size)
+        st.session_state.bedrooms = st.text_input("Bedrooms (1–9):", value=st.session_state.bedrooms)
+        st.session_state.bathrooms = st.text_input("Bathrooms (1–9):", value=st.session_state.bathrooms)
+        st.session_state.floors = st.text_input("Floors (1–9):", value=st.session_state.floors)
+        st.session_state.year_built = st.text_input("Year Built (1900–2025):", value=st.session_state.year_built)
+        st.session_state.parking = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"], index=0 if st.session_state.parking == "" else ["-- Select --", "Yes", "No"].index(st.session_state.parking))
+        st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"], index=0 if st.session_state.garden == "" else ["-- Select --", "Yes", "No"].index(st.session_state.garden))
+        st.session_state.facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):", value=st.session_state.facilities)
 
         col1, col2 = st.columns([5, 1])
         with col1:
@@ -86,43 +77,53 @@ if city:
             reset_clicked = st.button("🔄", help="Reset all fields")
 
         if reset_clicked:
-            st.session_state.confirm_reset = True
+            st.session_state.show_reset = True
 
-        if st.session_state.confirm_reset:
+        if st.session_state.get("show_reset"):
             st.warning("Are you sure you want to reset all fields?")
-            confirm_col1, confirm_col2 = st.columns(2)
-            with confirm_col1:
-                if st.button("Yes, Reset"):
-                    st.session_state.reset_now = True
-            with confirm_col2:
-                if st.button("No"):
-                    st.session_state.confirm_reset = False
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("Yes, Reset Now"):
+                    for key in ["city", "size", "bedrooms", "bathrooms", "floors", "year_built", "parking", "garden", "facilities"]:
+                        st.session_state[key] = ""
+                    st.session_state.show_reset = False
+                    st.experimental_rerun()
+            with c2:
+                if st.button("No, Cancel"):
+                    st.session_state.show_reset = False
 
         if estimate_clicked:
             try:
-                s = float(size)
-                b = int(bedrooms)
-                ba = int(bathrooms)
-                f = int(floors)
-                y = int(year_built)
+                size = float(st.session_state.size)
+                bedrooms = int(st.session_state.bedrooms)
+                bathrooms = int(st.session_state.bathrooms)
+                floors = int(st.session_state.floors)
+                year = int(st.session_state.year_built)
 
-                if not (99 <= s <= 99999): st.warning("Size must be 99–99999."); st.stop()
-                if not (1 <= b <= 9): st.warning("Bedrooms must be 1–9."); st.stop()
-                if not (1 <= ba <= 9): st.warning("Bathrooms must be 1–9."); st.stop()
-                if not (1 <= f <= 9): st.warning("Floors must be 1–9."); st.stop()
-                if not (1900 <= y <= 2025): st.warning("Year must be 1900–2025."); st.stop()
-                if parking_input == "-- Select --" or garden_input == "-- Select --":
-                    st.warning("Please select both Parking and Garden options."); st.stop()
+                if not (99 <= size <= 99999):
+                    st.warning("Size must be between 99 and 99,999 sqft."); st.stop()
+                if not (1 <= bedrooms <= 9):
+                    st.warning("Bedrooms must be between 1 and 9."); st.stop()
+                if not (1 <= bathrooms <= 9):
+                    st.warning("Bathrooms must be between 1 and 9."); st.stop()
+                if not (1 <= floors <= 9):
+                    st.warning("Floors must be between 1 and 9."); st.stop()
+                if not (1900 <= year <= 2025):
+                    st.warning("Year must be between 1900 and 2025."); st.stop()
+                if st.session_state.parking == "-- Select --" or st.session_state.garden == "-- Select --":
+                    st.warning("Please select Parking and Garden options."); st.stop()
 
-                parking = parking_input == "Yes"
-                garden = garden_input == "Yes"
+                parking = st.session_state.parking == "Yes"
+                garden = st.session_state.garden == "Yes"
 
-                estimated = estimate_price(base_price, s, b, ba, f, y, parking, garden, facilities)
-                estimated = min(max(estimated, 5e6), 5e8)
+                price = estimate_price(
+                    base_price, size, bedrooms, bathrooms, floors, year, parking, garden, st.session_state.facilities
+                )
+                price = min(max(price, 5e6), 5e8)
 
                 st.success(f"City Tier: {tier}")
-                st.success(f"Estimated House Price: ₹{estimated / 1e7:.2f} crore")
+                st.success(f"Estimated House Price: ₹{price / 1e7:.2f} crore")
                 st.caption("Goodbye! Have a great day and may your dream home find you soon!")
 
-            except ValueError:
+            except:
                 st.warning("Please fill all fields correctly to continue.")
