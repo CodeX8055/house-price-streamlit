@@ -42,12 +42,7 @@ def estimate_price(base_price, size, bedrooms, bathrooms, floors, year_built, pa
     price += len(facilities) * 0.03 * base_price
     return price
 
-# === App Config
-st.set_page_config(page_title="Indian House Price Estimator", layout="centered")
-st.title("Smart Indian House Price Estimator")
-st.caption("Estimate realistic house prices based on city, size, features, and facilities.")
-
-# === Session Defaults
+# === Default field values
 default_fields = {
     "city": "",
     "size": "",
@@ -58,14 +53,22 @@ default_fields = {
     "parking": "-- Select --",
     "garden": "-- Select --",
     "facilities": "",
-    "show_reset_confirm": False,
 }
 
-for key, value in default_fields.items():
+# === Initialize session state
+for key, val in default_fields.items():
     if key not in st.session_state:
-        st.session_state[key] = value
+        st.session_state[key] = val
 
-# === Input Fields
+if "show_reset_confirm" not in st.session_state:
+    st.session_state.show_reset_confirm = False
+
+# === Streamlit UI ===
+st.set_page_config(page_title="Indian House Price Estimator", layout="centered")
+st.title("Smart Indian House Price Estimator")
+st.caption("Estimate realistic house prices based on city, size, features, and facilities.")
+
+# === Inputs
 st.session_state.city = st.text_input("Enter your City (India):", value=st.session_state.city).strip().lower()
 
 if st.session_state.city:
@@ -83,7 +86,7 @@ if st.session_state.city:
         st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"], index=["-- Select --", "Yes", "No"].index(st.session_state.garden))
         st.session_state.facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):", value=st.session_state.facilities)
 
-        # Buttons: Estimate and Reset
+        # === Buttons: Estimate and Reset
         col1, col2 = st.columns([5, 1])
         with col1:
             estimate_clicked = st.button("Estimate Price")
@@ -101,7 +104,8 @@ if st.session_state.city:
                 if st.button("Yes, Reset"):
                     for key in default_fields:
                         st.session_state[key] = default_fields[key]
-                    st.rerun()  # Clean rerun with blank state
+                    st.session_state.show_reset_confirm = False
+                    st.rerun()
             with confirm_col2:
                 if st.button("No, Cancel"):
                     st.session_state.show_reset_confirm = False
