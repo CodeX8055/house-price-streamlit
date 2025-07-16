@@ -15,34 +15,26 @@ def detect_city_tier(city):
     else:
         return 0.6e7, "Tier 3"
 
-# === Price Estimation Function ===
+# === Estimation Logic ===
 def estimate_price(base_price, size, bedrooms, bathrooms, floors, year_built, parking, garden, facilities):
     price = base_price
     size_diff = size - 1500
     price += (size_diff // 100) * 0.05 * base_price
-    if bedrooms == 1:
-        price -= 0.10 * base_price
-    elif bedrooms >= 3:
-        price += 0.10 * base_price
-    if bathrooms > 2:
-        price += 0.05 * (bathrooms - 2) * base_price
-    elif bathrooms < 2:
-        price -= 0.05 * (2 - bathrooms) * base_price
-    if floors == 2:
-        price += 0.10 * base_price
-    elif floors >= 3:
-        price += 0.20 * base_price
+    if bedrooms == 1: price -= 0.10 * base_price
+    elif bedrooms >= 3: price += 0.10 * base_price
+    if bathrooms > 2: price += 0.05 * (bathrooms - 2) * base_price
+    elif bathrooms < 2: price -= 0.05 * (2 - bathrooms) * base_price
+    if floors == 2: price += 0.10 * base_price
+    elif floors >= 3: price += 0.20 * base_price
     age = max(0, 2025 - year_built)
     price *= max(1 - 0.01 * age, 0.7)
-    if parking:
-        price += 0.05 * base_price
-    if garden:
-        price += 0.05 * base_price
+    if parking: price += 0.05 * base_price
+    if garden: price += 0.05 * base_price
     facilities = [f.strip().lower() for f in facilities.split(",") if f.strip().lower() not in ("", "no", "none")]
     price += len(facilities) * 0.03 * base_price
     return price
 
-# === Default field values
+# === Default values ===
 default_fields = {
     "city": "",
     "size": "",
@@ -53,22 +45,20 @@ default_fields = {
     "parking": "-- Select --",
     "garden": "-- Select --",
     "facilities": "",
+    "show_reset_confirm": False,
+    "reset_choice": ""
 }
 
-# === Initialize session state
 for key, val in default_fields.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-if "show_reset_confirm" not in st.session_state:
-    st.session_state.show_reset_confirm = False
-
-# === Streamlit UI ===
+# === UI Setup ===
 st.set_page_config(page_title="Indian House Price Estimator", layout="centered")
 st.title("Smart Indian House Price Estimator")
 st.caption("Estimate realistic house prices based on city, size, features, and facilities.")
 
-# === Inputs
+# Input Fields
 st.session_state.city = st.text_input("Enter your City (India):", value=st.session_state.city).strip().lower()
 
 if st.session_state.city:
@@ -82,35 +72,44 @@ if st.session_state.city:
         st.session_state.bathrooms = st.text_input("Bathrooms (1–9):", value=st.session_state.bathrooms)
         st.session_state.floors = st.text_input("Floors (1–9):", value=st.session_state.floors)
         st.session_state.year_built = st.text_input("Year Built (1900–2025):", value=st.session_state.year_built)
-        st.session_state.parking = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"], index=["-- Select --", "Yes", "No"].index(st.session_state.parking))
-        st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"], index=["-- Select --", "Yes", "No"].index(st.session_state.garden))
+        st.session_state.parking = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"],
+                                                index=["-- Select --", "Yes", "No"].index(st.session_state.parking))
+        st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"],
+                                               index=["-- Select --", "Yes", "No"].index(st.session_state.garden))
         st.session_state.facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):", value=st.session_state.facilities)
 
-        # === Buttons: Estimate and Reset
+        # Buttons: Estimate and Reset
         col1, col2 = st.columns([5, 1])
         with col1:
             estimate_clicked = st.button("Estimate Price")
         with col2:
             reset_clicked = st.button("🔄", help="Reset form")
 
-        # === RESET CONFIRMATION (One-click)
+        # === RESET Confirmation with one-click logic
         if reset_clicked:
             st.session_state.show_reset_confirm = True
+            st.session_state.reset_choice = ""
 
         if st.session_state.show_reset_confirm:
             st.warning("Are you sure you want to reset all fields?")
-            confirm_col1, confirm_col2 = st.columns(2)
-            with confirm_col1:
+            cc1, cc2 = st.columns(2)
+            with cc1:
                 if st.button("Yes, Reset"):
-                    for key in default_fields:
-                        st.session_state[key] = default_fields[key]
-                    st.session_state.show_reset_confirm = False
-                    st.rerun()
-            with confirm_col2:
+                    st.session_state.reset_choice = "yes"
+            with cc2:
                 if st.button("No, Cancel"):
-                    st.session_state.show_reset_confirm = False
+                    st.session_state.reset_choice = "no"
 
-        # === ESTIMATE CALCULATION
+        if st.session_state.reset_choice == "yes":
+            for key in default_fields:
+                st.session_state[key] = default_fields[key]
+            st.rerun()
+
+        if st.session_state.reset_choice == "no":
+            st.session_state.show_reset_confirm = False
+            st.session_state.reset_choice = ""
+
+        # === Estimate Logic
         if estimate_clicked:
             try:
                 size = float(st.session_state.size)
