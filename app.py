@@ -100,7 +100,6 @@ if city:
                 st.success(f"City Tier: {tier}")
                 st.success(f"Estimated House Price: ₹{estimated / 1e7:.2f} crore")
                 st.caption("Goodbye! Have a great day and may your dream home find you soon!")
-                st.caption("ID: DV06AI00033")
                 st.experimental_rerun()
 
         except ValueError:
