@@ -88,11 +88,17 @@ if city:
             confirm_col1, confirm_col2 = st.columns(2)
             with confirm_col1:
                 if st.button("Yes, Reset"):
-                    st.session_state.clear()
+                    for key in list(st.session_state.keys()):
+                        del st.session_state[key]
+                    st.session_state["just_reset"] = True
                     st.experimental_rerun()
             with confirm_col2:
                 if st.button("No"):
                     st.session_state.confirm_reset = False
+
+        # Optional cleanup after rerun
+        if "just_reset" in st.session_state:
+            del st.session_state["just_reset"]
 
         # Handle Estimate
         if estimate_clicked:
