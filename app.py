@@ -42,7 +42,7 @@ def estimate_price(base_price, size, bedrooms, bathrooms, floors, year_built, pa
     price += len(facilities) * 0.03 * base_price
     return price
 
-# === Default values ===
+# === Default Values ===
 defaults = {
     "city": "",
     "size": "",
@@ -54,7 +54,8 @@ defaults = {
     "garden": "-- Select --",
     "facilities": "",
     "confirm_reset": False,
-    "reset_trigger": False
+    "reset_trigger": False,
+    "reset_message_shown": False
 }
 
 for key, val in defaults.items():
@@ -94,31 +95,31 @@ if st.session_state.city:
         with col2:
             reset = st.button("🔄", help="Reset form")
 
-        # Handle Reset confirmation
+        # === Handle Reset Trigger ===
         if reset:
             st.session_state.confirm_reset = True
-            st.session_state.reset_trigger = False
+            st.session_state.reset_message_shown = False
 
         if st.session_state.confirm_reset:
             st.warning("Are you sure you want to reset all fields?")
             c1, c2 = st.columns(2)
             with c1:
                 if st.button("Yes, Reset", key="yes_reset"):
-                    st.session_state.reset_trigger = True
+                    for key in defaults:
+                        st.session_state[key] = defaults[key]
+                    st.session_state.reset_message_shown = True
                     st.session_state.confirm_reset = False
             with c2:
                 if st.button("No, Cancel", key="no_reset"):
                     st.session_state.confirm_reset = False
+                    st.session_state.reset_message_shown = False
 
-        # Perform actual reset
-        if st.session_state.reset_trigger:
-         for key in defaults:
-            st.session_state[key] = defaults[key]
-        st.session_state.reset_trigger = False
-        st.success("All fields have been reset.")
+        # Show reset message only after successful reset
+        if st.session_state.reset_message_shown:
+            st.success("✅ All fields have been reset.")
+            st.session_state.reset_message_shown = False
 
-
-        # Handle Estimate
+        # === Handle Estimate ===
         if estimate:
             try:
                 size = float(st.session_state.size)
