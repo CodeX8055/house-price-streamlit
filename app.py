@@ -53,7 +53,8 @@ defaults = {
     "parking": "-- Select --",
     "garden": "-- Select --",
     "facilities": "",
-    "confirm_reset": False
+    "confirm_reset": False,
+    "reset_trigger": False
 }
 
 for key, val in defaults.items():
@@ -79,9 +80,12 @@ if st.session_state.city:
         st.session_state.bathrooms = st.text_input("Bathrooms (1–9):", value=st.session_state.bathrooms)
         st.session_state.floors = st.text_input("Floors (1–9):", value=st.session_state.floors)
         st.session_state.year_built = st.text_input("Year Built (1900–2025):", value=st.session_state.year_built)
-        st.session_state.parking = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"], index=["-- Select --", "Yes", "No"].index(st.session_state.parking))
-        st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"], index=["-- Select --", "Yes", "No"].index(st.session_state.garden))
-        st.session_state.facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):", value=st.session_state.facilities)
+        st.session_state.parking = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"],
+                                                index=["-- Select --", "Yes", "No"].index(st.session_state.parking))
+        st.session_state.garden = st.selectbox("Garden/Lawn?", ["-- Select --", "Yes", "No"],
+                                               index=["-- Select --", "Yes", "No"].index(st.session_state.garden))
+        st.session_state.facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):",
+                                                    value=st.session_state.facilities)
 
         # Buttons
         col1, col2 = st.columns([5, 1])
@@ -90,21 +94,27 @@ if st.session_state.city:
         with col2:
             reset = st.button("🔄", help="Reset form")
 
-        # Handle Reset
+        # Handle Reset confirmation
         if reset:
             st.session_state.confirm_reset = True
+            st.session_state.reset_trigger = False
 
         if st.session_state.confirm_reset:
             st.warning("Are you sure you want to reset all fields?")
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("Yes, Reset"):
-                    for key in defaults:
-                        st.session_state[key] = defaults[key]
-                    st.success("All fields reset.")
-            with c2:
-                if st.button("No, Cancel"):
+                if st.button("Yes, Reset", key="yes_reset"):
+                    st.session_state.reset_trigger = True
                     st.session_state.confirm_reset = False
+            with c2:
+                if st.button("No, Cancel", key="no_reset"):
+                    st.session_state.confirm_reset = False
+
+        # Perform actual reset
+        if st.session_state.reset_trigger:
+            for key in defaults:
+                st.session_state[key] = defaults[key]
+            st.experimental_rerun()
 
         # Handle Estimate
         if estimate:
@@ -131,7 +141,8 @@ if st.session_state.city:
                 parking = st.session_state.parking == "Yes"
                 garden = st.session_state.garden == "Yes"
 
-                final_price = estimate_price(base_price, size, bedrooms, bathrooms, floors, year, parking, garden, st.session_state.facilities)
+                final_price = estimate_price(base_price, size, bedrooms, bathrooms, floors, year, parking, garden,
+                                             st.session_state.facilities)
                 final_price = min(max(final_price, 5e6), 5e8)
 
                 st.success(f"City Tier: {tier}")
