@@ -56,24 +56,52 @@ if city:
     else:
         base_price, tier = detect_city_tier(city)
 
-        size = st.number_input("Size (in sqft):", min_value=99, max_value=99999, step=1)
-        bedrooms = st.number_input("Bedrooms (1–9):", min_value=1, max_value=9, step=1)
-        bathrooms = st.number_input("Bathrooms (1–9):", min_value=1, max_value=9, step=1)
-        floors = st.number_input("Floors (1–9):", min_value=1, max_value=9, step=1)
-        year_built = st.number_input("Year Built (1900–2025):", min_value=1900, max_value=2025, step=1)
-        parking = st.radio("Parking Available?", ["Yes", "No"]) == "Yes"
-        garden = st.radio("Garden/Lawn?", ["Yes", "No"]) == "Yes"
+        size_input = st.text_input("Size (in sqft):")
+        bedrooms_input = st.text_input("Bedrooms (1–9):")
+        bathrooms_input = st.text_input("Bathrooms (1–9):")
+        floors_input = st.text_input("Floors (1–9):")
+        year_input = st.text_input("Year Built (1900–2025):")
+        parking_input = st.selectbox("Parking Available?", ["-- Select --", "Yes", "No"])
+        garden_input = st.selectbox("Garden/Lawn Available?", ["-- Select --", "Yes", "No"])
         facilities = st.text_input("Extra facilities (e.g. lift, balcony, gym, pool):")
 
-        # === Estimate Button ===
-        if st.button("Estimate Price"):
-            estimated = estimate_price(base_price, size, bedrooms, bathrooms, floors, year_built, parking, garden, facilities)
-            estimated = min(max(estimated, 5e6), 5e8)
+        # Validation
+        try:
+            size = float(size_input)
+            bedrooms = int(bedrooms_input)
+            bathrooms = int(bathrooms_input)
+            floors = int(floors_input)
+            year_built = int(year_input)
+            if not (99 <= size <= 99999):
+                st.warning("Size must be between 99 and 99,999 sqft.")
+                st.stop()
+            if not (1 <= bedrooms <= 9):
+                st.warning("Bedrooms must be between 1 and 9.")
+                st.stop()
+            if not (1 <= bathrooms <= 9):
+                st.warning("Bathrooms must be between 1 and 9.")
+                st.stop()
+            if not (1 <= floors <= 9):
+                st.warning("Floors must be between 1 and 9.")
+                st.stop()
+            if not (1900 <= year_built <= 2025):
+                st.warning("Year must be between 1900 and 2025.")
+                st.stop()
+            if parking_input == "-- Select --" or garden_input == "-- Select --":
+                st.warning("Please select Parking and Garden options.")
+                st.stop()
 
-            st.success(f"City Tier: {tier}")
-            st.success(f"Estimated House Price: ₹{estimated / 1e7:.2f} crore")
-            st.caption("Goodbye! Have a great day and may your dream home find you soon!")
-            st.caption("ID: DV06AI00033")
+            parking = parking_input == "Yes"
+            garden = garden_input == "Yes"
 
-            # Auto-reset form after showing result
-            st.experimental_rerun()
+            if st.button("Estimate Price"):
+                estimated = estimate_price(base_price, size, bedrooms, bathrooms, floors, year_built, parking, garden, facilities)
+                estimated = min(max(estimated, 5e6), 5e8)
+                st.success(f"City Tier: {tier}")
+                st.success(f"Estimated House Price: ₹{estimated / 1e7:.2f} crore")
+                st.caption("Goodbye! Have a great day and may your dream home find you soon!")
+                st.caption("ID: DV06AI00033")
+                st.experimental_rerun()
+
+        except ValueError:
+            st.warning("Please fill all fields correctly to continue.")
